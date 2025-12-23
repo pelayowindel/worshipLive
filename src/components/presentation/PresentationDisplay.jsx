@@ -80,7 +80,7 @@ export default function PresentationDisplay({
             className="absolute top-0 left-0 right-0 bottom-0 flex flex-col items-center justify-center p-6 sm:p-10 md:p-16 lg:p-20"
           >
             {/* Stanza Label (only if exists) */}
-            {stanza.label && stanza.label.trim() && (
+            {/* {stanza.label && stanza.label.trim() && (
               <motion.span
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -89,7 +89,7 @@ export default function PresentationDisplay({
               >
                 {stanza.label}
               </motion.span>
-            )}
+            )} */}
             
             {/* Lyrics */}
             <div className="text-center w-full max-w-6xl overflow-hidden">

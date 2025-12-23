@@ -23,7 +23,7 @@ export default function Present() {
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [currentStanzaIndex, setCurrentStanzaIndex] = useState(-1); // -1 = title slide
   const [isBlank, setIsBlank] = useState(false);
-  const [clearText, setClearText] = useState(false);
+  const [clearText, setClearText] = useState(true);
   const [liveBackground, setLiveBackground] = useState('');
   const [songs, setSongs] = useState([]);
   const [currentPlaylist, setCurrentPlaylist] = useState(null);
