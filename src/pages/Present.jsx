@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getDatabase } from "@/components/database";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -29,6 +29,8 @@ export default function Present() {
   const [currentPlaylist, setCurrentPlaylist] = useState(null);
   const [allSongs, setAllSongs] = useState([]);
   const [broadcastChannel, setBroadcastChannel] = useState(null);
+  const slideRefs = useRef({});
+  const slideStripRef = useRef(null);
 
   // Initialize BroadcastChannel
   useEffect(() => {
@@ -107,7 +109,16 @@ export default function Present() {
     broadcastChannel.postMessage({ type: 'PRESENTATION_UPDATE', state });
   }, [currentStanza, background, currentSong, currentStanzaIndex, isBlank, clearText, broadcastChannel]);
 
-
+  // Auto-scroll the slide strip to the active slide
+  useEffect(() => {
+    if (currentStanzaIndex >= 0 && slideRefs.current[currentStanzaIndex]) {
+      slideRefs.current[currentStanzaIndex].scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest'
+      });
+    }
+  }, [currentStanzaIndex]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -324,10 +335,11 @@ export default function Present() {
 
           {/* Slide Strip */}
           <div className="h-32 bg-slate-900 border-t border-slate-800 p-3">
-            <div className="flex gap-2 overflow-x-auto h-full">
+            <div ref={slideStripRef} className="flex gap-2 overflow-x-auto h-full scroll-smooth">
               {currentSong?.stanzas?.map((stanza, idx) => (
                 <SlidePreview
                   key={idx}
+                  ref={el => slideRefs.current[idx] = el}
                   stanza={stanza}
                   background={background}
                   isActive={idx === currentStanzaIndex}

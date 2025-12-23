@@ -1,14 +1,14 @@
 import React from 'react';
 import { cn } from "@/lib/utils";
 
-export default function SlidePreview({ 
+const SlidePreview = React.forwardRef(({ 
   stanza, 
   background, 
   isActive = false, 
   onClick,
   size = 'md',
   showLabel = true
-}) {
+}, ref) => {
   const sizeClasses = {
     sm: 'w-24 h-14',
     md: 'w-40 h-24',
@@ -23,6 +23,7 @@ export default function SlidePreview({
 
   return (
     <button
+      ref={ref}
       onClick={onClick}
       className={cn(
         "relative rounded-lg overflow-hidden transition-all flex-shrink-0",
@@ -75,4 +76,8 @@ export default function SlidePreview({
       )}
     </button>
   );
-}
+});
+
+SlidePreview.displayName = 'SlidePreview';
+
+export default SlidePreview;
