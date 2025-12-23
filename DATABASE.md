@@ -793,6 +793,336 @@ This is useful for debugging but can be disabled by removing the dev mode plugin
 
 ---
 
+---
+
+## Present View Architecture Diagram
+
+### Data Flow Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          INDEXEDDB STORAGE                             │
+│  ┌──────────────────┬──────────────────┬──────────────────────────────┐ │
+│  │   SONGS          │   PLAYLISTS      │   BACKGROUNDS                 │ │
+│  │  collection      │  collection      │   collection                  │ │
+│  │                  │                  │                               │ │
+│  │ ├─ id            │ ├─ id            │ ├─ id                         │ │
+│  │ ├─ title         │ ├─ name          │ ├─ name                       │ │
+│  │ ├─ author        │ ├─ date          │ ├─ type (image/video)         │ │
+│  │ ├─ stanzas[]     │ ├─ song_ids[]    │ ├─ url                        │ │
+│  │ │ ├─ type        │ ├─ created_date  │ ├─ category                   │ │
+│  │ │ ├─ label       │ └─ updated_date  │ └─ created_date               │ │
+│  │ │ └─ lines       │                  │                               │ │
+│  │ ├─ category      │                  │                               │ │
+│  │ ├─ default_bg    │                  │                               │ │
+│  │ ├─ created_date  │                  │                               │ │
+│  │ └─ updated_date  │                  │                               │ │
+│  └──────────────────┴──────────────────┴──────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
+         ▲                                ▲
+         │                                │
+    SUBSCRIPTION 1:               SUBSCRIPTION 2:
+    db.songs.find()               db.playlists.findOne(id)
+         │                                │
+         └────────────┬────────────────────┘
+                      │
+┌─────────────────────▼────────────────────────────────────────────────────┐
+│                     PRESENT VIEW COMPONENT                               │
+│  (src/pages/Present.jsx)                                                │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ STATE MANAGEMENT                                                 │  │
+│  │                                                                  │  │
+│  │  allSongs[] ◄──── Songs subscription (all songs)               │  │
+│  │  currentPlaylist ◄── Playlist subscription                     │  │
+│  │  songs[] ◄────── Resolved from playlist.song_ids              │  │
+│  │  currentSongIndex ──► Index in songs[]                        │  │
+│  │  currentStanzaIndex ──► Index in song.stanzas[] (-1=title)    │  │
+│  │  liveBackground ──► Override background ID                    │  │
+│  │  isBlank ──► True if screen should be blank                   │  │
+│  │  clearText ──► Clear text before next stanza                  │  │
+│  │                                                                 │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ COMPUTED VALUES                                                  │  │
+│  │                                                                  │  │
+│  │  currentSong = songs[currentSongIndex]                          │  │
+│  │  currentStanza = currentSong.stanzas[currentStanzaIndex]        │  │
+│  │  background = liveBackground || currentSong.default_background │  │
+│  │                                                                 │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ NAVIGATION FUNCTIONS                                             │  │
+│  │                                                                  │  │
+│  │  goNext() ───► Advance to next stanza or song                  │  │
+│  │  goPrevious() ─► Go back to previous stanza or song            │  │
+│  │  goToStanza(songIdx, stanzaIdx) ─► Jump to specific location   │  │
+│  │                                                                 │  │
+│  │  Keyboard Shortcuts:                                            │  │
+│  │  • Arrow Right / Space / Page Down ─► goNext()                 │  │
+│  │  • Arrow Left / Page Up ─► goPrevious()                        │  │
+│  │  • B Key ─► Toggle blank screen                                │  │
+│  │  • Escape ─► Clear blank screen                                │  │
+│  │                                                                 │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+└──────────────────┬──────────────────────┬──────────────────┬────────────┘
+                   │                      │                  │
+                   │                      │                  │
+          RENDER 1 │           RENDER 2 │        RENDER 3│
+                   │                      │                  │
+┌──────────────────▼─────┐  ┌─────────────▼─────────┐  ┌────▼──────────────┐
+│  PRESENTATION          │  │  SONG LIST (Left      │  │  SLIDE STRIP      │
+│  DISPLAY               │  │  Sidebar)             │  │  (Bottom)         │
+│                        │  │                       │  │                   │
+│ ┌────────────────────┐ │  │ Songs:                │  │ Title | V1 | Cho│ │
+│ │ Background Image  │ │  │ ├─ Song 1             │  │       (active)   │ │
+│ │                   │ │  │ ├─ Song 2 (current)   │  │                   │
+│ │                   │ │  │ └─ Song 3             │  │ Auto-scrolls to  │
+│ │                   │ │  │                       │  │ active stanza    │
+│ │  [Song Title]     │ │  │ Stanzas in current:   │  │                   │
+│ │                   │ │  │ ├─ Title (active)     │  │ Reflects current│ │
+│ │  Stanza Text Here │ │  │ ├─ Verse 1            │  │ presentation     │ │
+│ │                   │ │  │ └─ Chorus             │  │ position         │ │
+│ │                   │ │  │                       │  │                   │
+│ │                   │ │  │ On Click:             │  │ On Click:         │
+│ │                   │ │  │ goToStanza(idx, -1)   │  │ goToStanza()      │
+│ │                   │ │  │ goToStanza(idx, idx)  │  │                   │
+│ └────────────────────┘ │  │                       │  │                   │
+│                        │  └───────────────────────┘  └───────────────────┘
+│ (Updates via Broadcast)   (Updates via State)      (Updates via State)
+│                        │
+│ Controls & Buttons:    │
+│ • Home Button          │
+│ • Mirror Window        │
+│ • Teleprompter         │
+│ • Fullscreen           │
+│ • Background Picker    │
+│                        │
+└────────────────────────┘
+         ▲
+         │
+         │ postMessage via BroadcastChannel
+         │
+```
+
+### Multi-Window Broadcast Flow
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                    PRESENT VIEW (Controller)                          │
+│                                                                       │
+│  State changes (navigation, background, blank):                      │
+│  currentSongIndex, currentStanzaIndex, isBlank, etc.               │
+│                                                                       │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │ useEffect hook triggered on state change                    │    │
+│  │                                                              │    │
+│  │ const state = {                                             │    │
+│  │   stanza: currentStanza,                                    │    │
+│  │   background,                                               │    │
+│  │   songTitle: currentSong?.title,                            │    │
+│  │   song: currentSong,                                        │    │
+│  │   stanzaIndex: currentStanzaIndex,                          │    │
+│  │   isBlank,                                                  │    │
+│  │   clearText,                                                │    │
+│  │   showTitleSlide: currentStanzaIndex === -1                │    │
+│  │ };                                                          │    │
+│  │                                                              │    │
+│  │ broadcastChannel.postMessage({                              │    │
+│  │   type: 'PRESENTATION_UPDATE',                              │    │
+│  │   state                                                     │    │
+│  │ });                                                         │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                       │
+└───────────────────────────────┬───────────────────────────────────────┘
+                                │
+                    Session ID: presentation-${sessionId}
+                                │
+                ┌───────────────┼───────────────┐
+                │               │               │
+         ┌──────▼─────┐  ┌──────▼──────┐  ┌────▼──────────┐
+         │   MIRROR   │  │ TELEPROMPTER│  │  OTHER WINDOWS│
+         │  DISPLAY   │  │   WINDOW    │  │               │
+         │            │  │             │  │               │
+         │ Listens on │  │ Listens on  │  │ Listens on    │
+         │ Broadcast  │  │ Broadcast   │  │ Broadcast     │
+         │ Channel    │  │ Channel     │  │ Channel       │
+         │            │  │             │  │               │
+         │ Updates:   │  │ Updates:    │  │               │
+         │ • Display  │  │ • Text      │  │ • Can mirror │
+         │ • Stanza   │  │ • Scroll    │  │   or show    │
+         │ • BG       │  │ • Position  │  │   different  │
+         │            │  │             │  │   content    │
+         └────────────┘  └─────────────┘  └───────────────┘
+```
+
+### Song Resolution Flow (Playlist Mode)
+
+```
+URL: ?playlist=playlist-id-123
+
+Step 1: Parse URL
+  playlistId = "playlist-id-123"
+
+Step 2: Subscribe to Playlist Document
+  db.playlists.findOne("playlist-id-123").$.subscribe(doc)
+  
+  Retrieved document:
+  {
+    id: "playlist-id-123",
+    name: "Sunday Service",
+    song_ids: ["song-1", "song-2", "song-3"],
+    date: "2024-12-23"
+  }
+  
+  setCurrentPlaylist(playlistData)
+
+Step 3: Subscribe to ALL Songs (in parallel)
+  db.songs.find().$.subscribe(docs)
+  
+  Retrieved documents:
+  {
+    id: "song-1",
+    title: "Amazing Grace",
+    stanzas: [...]
+  }
+  {
+    id: "song-2",
+    title: "Holy Holy Holy",
+    stanzas: [...]
+  }
+  {
+    id: "song-3",
+    title: "Jesus Loves Me",
+    stanzas: [...]
+  }
+  
+  setAllSongs(allSongsData)
+
+Step 4: Resolution Effect (triggers when either changes)
+  When currentPlaylist changes:
+    currentPlaylist.song_ids = ["song-1", "song-2", "song-3"]
+  
+  When allSongs changes:
+    allSongs = [all song documents]
+  
+  Resolution mapping:
+    orderedSongs = currentPlaylist.song_ids.map(id => 
+      allSongs.find(s => s.id === id)
+    ).filter(Boolean)
+  
+  Result:
+    songs[] = [
+      { id: "song-1", title: "Amazing Grace", stanzas: [...] },
+      { id: "song-2", title: "Holy Holy Holy", stanzas: [...] },
+      { id: "song-3", title: "Jesus Loves Me", stanzas: [...] }
+    ]
+
+Step 5: Use Resolved Songs
+  currentSongIndex = 0
+  currentSong = songs[0] = Amazing Grace document
+  currentStanza = currentSong.stanzas[0]
+  
+  Display with full song data
+```
+
+### State Transition Diagram
+
+```
+                    ┌─────────────────┐
+                    │   TITLE SLIDE   │
+                    │ stanzaIndex=-1  │
+                    └────────┬────────┘
+                             │
+                        goNext()
+                             │
+                    ┌────────▼────────┐
+                    │   VERSE 1       │
+                    │ stanzaIndex=0   │
+                    └────────┬────────┘
+                             │
+                        goNext()
+                             │
+                    ┌────────▼────────┐
+                    │   CHORUS        │
+                    │ stanzaIndex=1   │
+                    └────────┬────────┘
+                             │
+                        goNext()
+                             │
+                    ┌────────▼────────────────────┐
+                    │  NEXT SONG TITLE SLIDE      │
+                    │ songIndex++, stanzaIndex=-1 │
+                    └─────────────────────────────┘
+                             │
+                        (repeat for all songs)
+                             │
+                    ┌────────▼────────────┐
+                    │  END OF PLAYLIST    │
+                    │ No more navigation  │
+                    └─────────────────────┘
+
+GoNext Logic:
+  if stanzaIndex < stanzas.length - 1:
+    stanzaIndex++  (next stanza in current song)
+  else if songIndex < songs.length - 1:
+    songIndex++
+    stanzaIndex = -1  (show title of next song)
+  else:
+    (end of presentation)
+
+GoPrevious Logic:
+  if stanzaIndex > -1:
+    stanzaIndex--  (previous stanza)
+  else if songIndex > 0:
+    songIndex--
+    stanzaIndex = (prev song's stanzas.length - 1)  (last stanza of previous song)
+  else:
+    (at beginning)
+```
+
+### Real-Time Update Scenario
+
+```
+Timeline: Editing Song While Presenting
+
+t=0s: Presenter at "Amazing Grace" Verse 1
+     Present View displays: Amazing Grace, stanzas[0]
+
+t=5s: Editor (another window) edits "Amazing Grace"
+     Changes: "stanzas[0].lines" from "Amazing grace, how sweet the sound"
+             to "Amazing grace, how sweet the sound (UPDATED)"
+
+t=6s: RxDB detects change in songs collection
+     Triggers db.songs.find().$ subscription in Present View
+
+t=7s: setAllSongs() called with updated data
+     allSongs now contains updated "Amazing Grace" document
+
+t=8s: songs[] array updates (same index, new content)
+     currentSong = songs[0] (updated document)
+
+t=9s: currentStanza computed value updates
+     currentStanza.lines = "Amazing grace, how sweet the sound (UPDATED)"
+
+t=10s: React re-renders PresentationDisplay with new stanza text
+      Presenter sees the updated lyric in real-time
+
+t=11s: useEffect hook detects change
+      broadcastChannel.postMessage() sends updated state to:
+      - Mirror Display window
+      - Teleprompter window
+      - Any other connected windows
+
+t=12s: Mirror and Teleprompter receive PRESENTATION_UPDATE
+      They update their display to show the new lyric
+```
+
+---
+
 ## Future Enhancements
 
 1. **Cloud Sync**: Add synchronization with a backend server
