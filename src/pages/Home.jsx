@@ -56,13 +56,12 @@ export default function Home() {
         
         <div className="relative max-w-6xl mx-auto px-4 py-16 md:py-24">
           <h1 className="text-4xl md:text-6xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              Guilt-Free 
+            <br />
+            </span>
             Worship Lyrics
             <br />Presentation Made Easy
-            <br />
-            <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              For Free And 
-              <br />Ready to Download!
-            </span>
           </h1>
           
           <p className="text-xl text-slate-400 max-w-2xl mb-8">
@@ -70,6 +69,8 @@ export default function Home() {
             create service playlists, and present on multiple screens seamlessly {" "} 
             <span className='font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent'> 
               with no one-time payment and subscription fees.</span>
+            <br />With <span className='font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent'> easy to installation</span>
+            {" "}all features are available offline.
           </p>
           
           <div className="flex flex-wrap gap-4">
