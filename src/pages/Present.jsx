@@ -4,14 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   ArrowLeft, ArrowRight, MonitorOff, Monitor, Maximize, 
-  ChevronLeft, ChevronRight, Home, Image, ExternalLink, Tv, ScrollText, EyeOff,
-  MonitorXIcon
+  ChevronLeft, ChevronRight, Home, Image, ExternalLink, Tv, ScrollText, EyeOff, Settings,MonitorXIcon
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import PresentationDisplay from "@/components/presentation/PresentationDisplay";
 import SlidePreview from "@/components/presentation/SlidePreview";
 import BackgroundPicker from "@/components/presentation/BackgroundPicker";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 export default function Present() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -32,6 +32,90 @@ export default function Present() {
   const [broadcastChannel, setBroadcastChannel] = useState(null);
   const slideRefs = useRef({});
   const slideStripRef = useRef(null);
+
+  // Saved screen assignments for Mirror/Teleprompter
+  const [screenSettings, setScreenSettings] = useState({
+    mirrorScreenIndex: null,
+    prompterScreenIndex: null
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem('worship:screenSettings');
+    if (saved) {
+      try {
+        setScreenSettings(JSON.parse(saved));
+      } catch {}
+    }
+  }, []);
+
+  const saveScreenSettings = useCallback((next) => {
+    setScreenSettings(prev => {
+      const updated = { ...prev, ...next };
+      localStorage.setItem('worship:screenSettings', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  // Helpers for multi-screen placement
+  const getScreens = async () => {
+    if ('getScreenDetails' in window) {
+      try {
+        const details = await window.getScreenDetails();
+        return details?.screens || [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  const pickScreenIndex = async (label) => {
+    try {
+      const screens = await getScreens();
+      if (!screens.length) {
+        alert('No multi-screen details available in this browser.');
+        return null;
+      }
+      const choice = prompt(
+        `Select ${label} screen (1-${screens.length}):\n` +
+        screens.map((s, i) =>
+          `${i + 1}. ${s.label || `Screen ${i + 1}`} (${s.width}x${s.height})${s.isPrimary ? ' [Primary]' : ''}`
+        ).join('\n')
+      );
+      if (!choice) return null;
+      const idx = parseInt(choice, 10) - 1;
+      if (isNaN(idx) || idx < 0 || idx >= screens.length) return null;
+      return idx;
+    } catch {
+      alert('Permission required to access screen details.');
+      return null;
+    }
+  };
+
+  const assignMirrorScreen = async () => {
+    const idx = await pickScreenIndex('mirror');
+    if (idx !== null) saveScreenSettings({ mirrorScreenIndex: idx });
+  };
+
+  const assignPrompterScreen = async () => {
+    const idx = await pickScreenIndex('prompter');
+    if (idx !== null) saveScreenSettings({ prompterScreenIndex: idx });
+  };
+
+  const openOnAssignedScreen = async (url, screenIndex) => {
+    try {
+      const screens = await getScreens();
+      if (screens.length > 0 && screenIndex != null && screenIndex >= 0 && screenIndex < screens.length) {
+        const s = screens[screenIndex];
+        const features = `left=${s.availLeft},top=${s.availTop},width=${s.availWidth},height=${s.availHeight},menubar=no,toolbar=no,location=no,status=no`;
+        const w = window.open(url, '_blank', features);
+        return w;
+      }
+    } catch {
+      // fall through to fallback
+    }
+    return window.open(url, '_blank', 'width=1280,height=720,menubar=no,toolbar=no,location=no,status=no');
+  };
 
   // Initialize BroadcastChannel
   useEffect(() => {
@@ -174,20 +258,21 @@ export default function Present() {
     setClearText(false);
   };
 
-  const openMirrorWindow = () => {
-    window.open(
-      createPageUrl(`MirrorDisplay?session=${sessionId}`),
-      '_blank',
-      'width=1280,height=720,menubar=no,toolbar=no,location=no,status=no'
-    );
+  const openMirrorWindow = async () => {
+    const url = createPageUrl(`MirrorDisplay?session=${sessionId}`);
+    await openOnAssignedScreen(url, screenSettings.mirrorScreenIndex);
   };
 
-  const openTeleprompter = () => {
-    window.open(
-      createPageUrl(`Teleprompter?session=${sessionId}`),
-      '_blank',
-      'width=800,height=900,menubar=no,toolbar=no,location=no,status=no'
-    );
+  const openTeleprompter = async () => {
+    const url = createPageUrl(`Teleprompter?session=${sessionId}`);
+    await openOnAssignedScreen(url, screenSettings.prompterScreenIndex);
+  };
+
+  const resetScreenAssignments = () => {
+    try {
+      localStorage.removeItem('worship:screenSettings');
+    } catch {}
+    setScreenSettings({ mirrorScreenIndex: null, prompterScreenIndex: null });
   };
 
   const openFullscreenOnScreen = async () => {
@@ -468,6 +553,56 @@ export default function Present() {
               </TooltipTrigger>
               <TooltipContent side="left">Open Teleprompter</TooltipContent>
             </Tooltip>
+
+            <div className="w-8 h-px bg-slate-800" />
+
+            <Sheet>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SheetTrigger asChild>
+                    <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white">
+                      <Settings className="w-5 h-5" />
+                    </Button>
+                  </SheetTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="left">Settings</TooltipContent>
+              </Tooltip>
+              <SheetContent side="right" className="w-80 bg-slate-900 border-l border-slate-800 text-slate-200">
+                <SheetHeader>
+                  <SheetTitle className="text-white">Presentation Settings</SheetTitle>
+                </SheetHeader>
+                <div className="mt-4 space-y-6">
+                  <div>
+                    <div className="text-sm font-semibold text-white mb-2">Screen Assignments</div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm">
+                          <div className="font-medium">Mirror Display</div>
+                          <div className="text-xs text-slate-400">Saved: {screenSettings.mirrorScreenIndex != null ? `Screen ${screenSettings.mirrorScreenIndex + 1}` : 'None'}</div>
+                        </div>
+                        <Button size="sm" variant="secondary" onClick={assignMirrorScreen}>
+                          Assign
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm">
+                          <div className="font-medium">Teleprompter</div>
+                          <div className="text-xs text-slate-400">Saved: {screenSettings.prompterScreenIndex != null ? `Screen ${screenSettings.prompterScreenIndex + 1}` : 'None'}</div>
+                        </div>
+                        <Button size="sm" variant="secondary" onClick={assignPrompterScreen}>
+                          Assign
+                        </Button>
+                      </div>
+                      <div className="pt-2">
+                        <Button size="sm" variant="ghost" className="text-slate-300 hover:text-white" onClick={resetScreenAssignments}>
+                          Clear Saved Screens
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
 
             <BackgroundPicker
               value={liveBackground}
