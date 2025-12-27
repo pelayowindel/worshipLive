@@ -5,7 +5,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { 
   ArrowLeft, ArrowRight, MonitorOff, Monitor, Maximize, 
   ChevronLeft, ChevronRight, Home, Image, ExternalLink, Tv, ScrollText, EyeOff, Settings,MonitorXIcon,
-  Eraser
+  Eraser,
+  ScreenShare
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -535,7 +536,7 @@ export default function Present() {
                   onClick={openMirrorWindow}
                   className="text-slate-400 hover:text-white"
                 >
-                  <ExternalLink className="w-5 h-5" />
+                  <ScreenShare className="w-5 h-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="left">Open Mirror Display</TooltipContent>
