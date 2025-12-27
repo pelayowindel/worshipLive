@@ -25,12 +25,27 @@ export default function MirrorDisplay() {
       }
     };
     
-    // Request fullscreen on load
-    document.addEventListener('click', () => {
-      document.documentElement.requestFullscreen?.();
-    }, { once: true });
+    // Request fullscreen on any user interaction
+    const handleFullscreenRequest = () => {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(err => console.log('Fullscreen failed:', err));
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      } else if (docEl.msRequestFullscreen) {
+        docEl.msRequestFullscreen();
+      }
+    };
 
-    return () => channel.close();
+    // Listen for any click or key to trigger fullscreen
+    window.addEventListener('click', handleFullscreenRequest);
+    window.addEventListener('keydown', handleFullscreenRequest);
+
+    return () => {
+      window.removeEventListener('click', handleFullscreenRequest);
+      window.removeEventListener('keydown', handleFullscreenRequest);
+      channel.close();
+    };
   }, [sessionId]);
 
   return (
@@ -49,7 +64,7 @@ export default function MirrorDisplay() {
         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
           <div className="text-center text-white/50">
             <p className="text-xl">Mirror Display Ready</p>
-            <p className="text-sm mt-2">Click anywhere to go fullscreen</p>
+            <p className="text-sm mt-2">Click anywhere or press F11 to go fullscreen</p>
             <p className="text-sm">Waiting for presentation...</p>
           </div>
         </div>
