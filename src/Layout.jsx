@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
-import { Music, ListMusic, Home, Play } from "lucide-react";
+import { Music, ListMusic, Home, Play, Component } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 
 export default function Layout({ children, currentPageName }) {
@@ -19,7 +19,7 @@ export default function Layout({ children, currentPageName }) {
   }
 
   const navItems = [
-    { name: 'Home', icon: Home, page: 'Home' },
+    { name: 'Dashboard', icon: Component, page: 'Dashboard' },
     { name: 'Songs', icon: Music, page: 'Songs' },
     { name: 'Playlists', icon: ListMusic, page: 'Playlists' },
   ];

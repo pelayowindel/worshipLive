@@ -6,10 +6,12 @@ import MirrorDisplay from './pages/MirrorDisplay';
 import Home from './pages/Home';
 import Teleprompter from './pages/Teleprompter';
 import __Layout from './Layout.jsx';
+import Dashboard from './pages/Dashboard';
 
 
 export const PAGES = {
   "Home": Home,
+  "Dashboard": Dashboard,
   "Songs": Songs,
   "Playlists": Playlists,
   "PlaylistEditor": PlaylistEditor,
