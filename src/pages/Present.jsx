@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   ArrowLeft, ArrowRight, MonitorOff, Monitor, Maximize, 
-  ChevronLeft, ChevronRight, Home, Image, ExternalLink, Tv, ScrollText, EyeOff, Settings,MonitorXIcon
+  ChevronLeft, ChevronRight, Home, Image, ExternalLink, Tv, ScrollText, EyeOff, Settings,MonitorXIcon,
+  Eraser
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -502,7 +503,7 @@ export default function Present() {
                   onClick={() => setClearText(!clearText)}
                   className={clearText ? "bg-orange-600 hover:bg-orange-700" : "text-slate-400 hover:text-white"}
                 >
-                  <EyeOff className="w-5 h-5" />
+                  <Eraser className="w-5 h-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="left">Clear Text</TooltipContent>
