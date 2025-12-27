@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   ArrowLeft, ArrowRight, MonitorOff, Monitor, Maximize, 
-  ChevronLeft, ChevronRight, Home, Image, ExternalLink, Tv, ScrollText, EyeOff
+  ChevronLeft, ChevronRight, Home, Image, ExternalLink, Tv, ScrollText, EyeOff,
+  MonitorXIcon
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -209,21 +210,30 @@ export default function Present() {
             const targetScreen = screens[index];
             
             if (targetScreen) {
-              // Open fullscreen window on selected screen
+              // Open mirror window on selected screen and request fullscreen immediately
               const newWindow = window.open(
-                createPageUrl(`MirrorDisplay?session=${sessionId}`),
+                createPageUrl(`MirrorDisplay?session=${sessionId}&autoFullscreen=true`),
                 '_blank',
-                `left=${targetScreen.availLeft},top=${targetScreen.availTop},width=${targetScreen.availWidth},height=${targetScreen.availHeight}`
+                `left=${targetScreen.availLeft},top=${targetScreen.availTop},width=${targetScreen.availWidth},height=${targetScreen.availHeight},fullscreen=yes`
               );
-              
+
               if (newWindow) {
-                // Request fullscreen after a short delay
-                setTimeout(() => {
-                  if (newWindow.document.documentElement.requestFullscreen) {
-                    newWindow.document.documentElement.requestFullscreen();
+                // Focus and request fullscreen in the new window within the same user gesture
+                try {
+                  newWindow.focus();
+                  const docEl = newWindow.document.documentElement;
+                  if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen();
+                  } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen();
+                  } else if (docEl.msRequestFullscreen) {
+                    docEl.msRequestFullscreen();
                   }
-                }, 500);
+                } catch (e) {
+                  // Ignore errors; MirrorDisplay will still show instruction overlay
+                }
               }
+
               return;
             }
           }
@@ -393,7 +403,7 @@ export default function Present() {
                   onClick={() => setIsBlank(!isBlank)}
                   className={isBlank ? "bg-red-600 hover:bg-red-700" : "text-slate-400 hover:text-white"}
                 >
-                  {isBlank ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
+                  <MonitorXIcon className="w-5 h-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="left">Blank Screen (B)</TooltipContent>

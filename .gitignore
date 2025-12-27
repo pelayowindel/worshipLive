@@ -28,4 +28,5 @@ dist-ssr
 *.sw?
 
 .env
-dev-dist/sw.js
+dev-dist/
+dist/
